@@ -8,7 +8,7 @@ from langchain.agents.middleware import FilesystemFileSearchMiddleware
 import uuid
 import json
 import base64
-
+import os
 
 # Define prompt for automatic program engineering (APE).
 template_generator_prompt = """
@@ -18,10 +18,14 @@ template_generator_prompt = """
     - El archivo del cual se extraerá la información.
     - La información deseada en el esquema de salida.
 
-    Tu tarea es generar una plantilla de prompt para cada campo del JSON.
+    # Tu tarea es generar una plantilla de prompt para cada campo del JSON.
 
     > Usa el archivo para reconocer patrones y contexto que ayuden a extraer la información requerida y
     usa la información deseada para saber qué información extraer.
+
+    > También, se te proporcionará mensajes adicionales con iteraciones pasadas, que pueden ayudarte a mejorar la plantilla de prompt.
+    > Tu objetivo es elevar la precisión lo más posible.
+
 """
 
 
@@ -69,13 +73,17 @@ def safe_description(val):
         val = str(val)
     return val.replace('"', "'")
 
-# Processes 
-def auto_generate_prompt() -> dict:
+class LangChainMessage(BaseModel):
+    role: str
+    content: str
+
+# Sub-processes 
+def auto_generate_prompt(messages: list[LangChainMessage]) -> dict:
     prompt_template_dict = {}
-    
+
     # Selecting the model
     llm = ChatOpenAI(
-        model="gpt-5",
+        model="gpt-4.1",
     )
 
     # Create agent 
@@ -98,6 +106,16 @@ def auto_generate_prompt() -> dict:
 
 
     # Invoke agent to get prompt template.
+    messages.append(
+        LangChainMessage(
+            role="developer",
+            content=f"""
+                Aquí está la información en output_auto_qualitas.json
+                {desired_output}
+            """
+        )
+    )
+
     result = agent_template_generator.invoke(
         {
             "messages": [
@@ -123,10 +141,10 @@ def auto_generate_prompt() -> dict:
 
     return prompt_template_dict
     
-def extract_information_from_prompt(prompt_template_dict: dict, json_path: str):
+def extract_information_from_prompt(prompt_template_dict: dict) -> dict:
     # Selecting the model
     llm = ChatOpenAI(
-        model="gpt-5",
+        model="gpt-4.1",
     )
 
     class GeneralInvoiceInformationModified(BaseModel):
@@ -190,155 +208,13 @@ def extract_information_from_prompt(prompt_template_dict: dict, json_path: str):
     
     return model_output_dict
 
-def execute_ape_proccess():
-
-    prompt_template_dict = auto_generate_prompt()
-
-    # Selecting the model
-    llm = ChatOpenAI(
-        model="gpt-5",
-    )
-
-    # Create agent 
-    agent_template_generator = create_agent(
-        model=llm,
-        tools=[],
-        response_format=ProviderStrategy(GeneralInvoiceInformation),
-        middleware=[
-            FilesystemFileSearchMiddleware(
-                root_path="automatic_program_engineering/input_files/first_test/"
-                # max_files=1,
-            )
-        ],
-        system_prompt=template_generator_prompt,
-    )
-
-    # Extracting the desired output data. 
-    with open(json_desired_output, "r", encoding="utf-8") as f:
-        desired_output = json.load(f)
-
-    # Get prompt template.
-    result = agent_template_generator.invoke(
-        {
-            "messages": [
-                {
-                    "type": "developer",
-                    "content": f"""
-                        Aquí está la información en output_auto_qualitas.json
-                        {desired_output}
-                    """
-                }
-            ]
-        }
-    )
-
-    prompt_template = result.get("structured_response")
-    prompt_template_dict = {}
-    # If you want it as a dictionary:
-    if prompt_template:
-        prompt_template_dict = prompt_template.dict()
-        # print(prompt_template_dict)
-    else:
-        print("No structured_response found in result.")
-
-    # Test prompt template.
-    template_validator_prompt =f"""
-    Eres un experto en extraer datos estructurados de documentos no estructurados.
-    Recibirás como entrada:
-    - El archivo del cual se extraerá la información.
-    - La información deseada en el esquema de salida.
-    """
-    # Por favor, extrae la información de acuerdo con la siguiente plantilla de prompt:
-    # {prompt_template_dict}
-
-
-    def safe_description(val):
-        # Ensure the description is a string and escape problematic quotes
-        if not isinstance(val, str):
-            val = str(val)
-        return val.replace('"', "'")
-
-    class GeneralInvoiceInformationModified(BaseModel):
-        poliza: str             = Field(default="", description=safe_description(prompt_template_dict.get("poliza", "")))
-        inicioPeriodoVigencia: str    = Field(default="", description=safe_description(prompt_template_dict.get("inicioPeriodoVigencia", "")))
-        finalPeriodoVigencia: str    = Field(default="", description=safe_description(prompt_template_dict.get("finalPeriodoVigencia", "")))
-        aseguradora: str        = Field(default="", description=safe_description(prompt_template_dict.get("aseguradora", "")))
-        ramo: str               = Field(default="", description=safe_description(prompt_template_dict.get("ramo", "")))
-        subRamo: str            = Field(default="", description=safe_description(prompt_template_dict.get("subRamo", "")))
-        cobertura: str          = Field(default="", description=safe_description(prompt_template_dict.get("cobertura", "")))
-        formaDePago: str       = Field(default="", description=safe_description(prompt_template_dict.get("formaDePago", "")))
-        primaNeta: str         = Field(default="", description=safe_description(prompt_template_dict.get("primaNeta", "")))
-        primerPago: str        = Field(default="", description=safe_description(prompt_template_dict.get("primerPago", "")))
-        pagoPosterior: str     = Field(default="", description=safe_description(prompt_template_dict.get("pagoPosterior", "")))
-        descuento: str         = Field(default="", description=safe_description(prompt_template_dict.get("descuento", "")))
-        iva: str               = Field(default="", description=safe_description(prompt_template_dict.get("iva", "")))
-        tasaFinanciamiento: str = Field(default="", description=safe_description(prompt_template_dict.get("tasaFinanciamiento", "")))
-        derechoPoliza: str     = Field(default="", description=safe_description(prompt_template_dict.get("derechoPoliza", "")))
-        total: str             = Field(default="", description=safe_description(prompt_template_dict.get("total", "")))
-        cargoPorFinanciamiento: str = Field(default="", description=safe_description(prompt_template_dict.get("cargoPorFinanciamiento", "")))
-        rfcAsegurado: str     = Field(default="", description=safe_description(prompt_template_dict.get("rfcAsegurado", "")))
-        nombreAsegurado: str  = Field(default="", description=safe_description(prompt_template_dict.get("nombreAsegurado", "")))
-        numeroSerie: str      = Field(default="", description=safe_description(prompt_template_dict.get("numeroSerie", "")))
-        modelo: str           = Field(default="", description=safe_description(prompt_template_dict.get("modelo", "")))
-        numeroPlacas: str     = Field(default="", description=safe_description(prompt_template_dict.get("numeroPlacas", "")))
-        adaptaciones: str     = Field(default="", description=safe_description(prompt_template_dict.get("adaptaciones", "")))
-        version: str          = Field(default="", description=safe_description(prompt_template_dict.get("version", "")))
-        beneficiarioPreferente: str = Field(default="", description=safe_description(prompt_template_dict.get("beneficiarioPreferente", "")))
-
-    print(template_validator_prompt)
-    print("+++++++++++++++++++++++++++++++++++++++")
-    agent_template_validator = create_agent(
-        model=llm,
-        tools=[],
-        response_format=ProviderStrategy(GeneralInvoiceInformationModified),
-        middleware=[
-            FilesystemFileSearchMiddleware(
-                root_path="automatic_program_engineering/input_files/first_test/"
-                # max_files=1,
-            )
-        ],
-        system_prompt=template_validator_prompt,
-    )
-
-    
-
-
-    result_validation = agent_template_validator.invoke({
-        "messages": [
-            {
-                "type": "developer",
-                "content": f"""
-                    Extrae la información de acuerdo con tu prompt.
-                """
-            }
-        ]
-    })
-
-    # Calculate result
-
-    # Example: Simulate agent validator output (replace with actual call)
-    # validator_result = agent_template_validator.invoke(...)
-    # model_output = validator_result['structured_response']
-    # If model_output is a Pydantic model, convert to dict
-    # model_output_dict = model_output.dict() if hasattr(model_output, 'dict') else model_output
-
-
-    # Use the actual model output from result_validation
-    with open(json_path, "r", encoding="utf-8") as f:
-        reference_output = json.load(f)
-
-    model_output = result_validation.get('structured_response')
-    if model_output:
-        model_output_dict = model_output.dict() if hasattr(model_output, 'dict') else model_output
-    else:
-        print("No structured_response found in result_validation.")
-        model_output_dict = {}
-
+def assess_the_extraction_accuracy(information_extracted: dict, reference_output: dict) -> dict:
     # Compare each field
     comparison = {}
+
     for key in reference_output:
         ref_val = reference_output[key]
-        model_val = model_output_dict.get(key, None)
+        model_val = information_extracted.get(key, None)
         comparison[key] = {
             "expected": ref_val,
             "actual": model_val,
@@ -349,27 +225,60 @@ def execute_ape_proccess():
     for k, v in comparison.items():
         print(f"{k}: expected={v['expected']} | actual={v['actual']} | match={v['match']}")
 
-    # Store prompt template.
-
-    # Store prompt template and accuracy
-    import os
-    prompt_template_dir = "automatic_program_engineering/prompt_template"
-    os.makedirs(prompt_template_dir, exist_ok=True)
-    unique_id = str(uuid.uuid4())
-    prompt_template_path = os.path.join(prompt_template_dir, f"prompt_template_{unique_id}.json")
-
     # Calculate accuracy
     total = len(comparison)
     correct = sum(1 for v in comparison.values() if v["match"])
     accuracy = correct / total if total > 0 else 0.0
+    print(f"\nOverall accuracy: {accuracy*100:.2f}%")
+    
+    comparison['overall_accuracy'] = accuracy
+
+    return comparison
+
+def store_prompt_template(prompt_template_dict: dict, accuracy: dict) -> str:
+    prompt_template_dir = "automatic_program_engineering/prompt_template"
+    os.makedirs(prompt_template_dir, exist_ok=True)
 
     # Save template dict and accuracy
-    to_store = {
+    prompt_template_to_store = {
         "prompt_template": prompt_template_dict,
         "accuracy": accuracy
     }
+
+    unique_id = str(uuid.uuid4())
+    prompt_template_path = os.path.join(prompt_template_dir, f"prompt_template_{unique_id}.json")
     with open(prompt_template_path, "w", encoding="utf-8") as f:
-        json.dump(to_store, f, ensure_ascii=False, indent=2)
+        json.dump(prompt_template_to_store, f, ensure_ascii=False, indent=2)
     print(f"\nPrompt template and accuracy saved to {prompt_template_path}")
+
+# Main process
+def execute_ape_process():
+    messages:list[LangChainMessage] = []
+
+    for i in range(3):
+        print(f"Starting iteration {i + 1}...\n")
+
+        print("Starting Automatic Program Engineering (APE) process...\n")
+        prompt_template_dict = auto_generate_prompt(messages)
+
+        print("Using the auto prompt template to extract information.\n")
+        information_extracted = extract_information_from_prompt(prompt_template_dict)
+
+        # Use the actual model output from result_validation
+        with open(json_desired_output, "r", encoding="utf-8") as f:
+            reference_output = json.load(f)
+
+        print("Assess accuracy of the template.\n")
+        comparision = assess_the_extraction_accuracy(information_extracted, reference_output)
+        
+        messages.append(
+            LangChainMessage(
+                role="system",
+                content=f"Iteración pasada: {comparision}"
+            )
+        )
+
+
+        store_prompt_template(prompt_template_dict, comparision["overall_accuracy"])
 
 execute_ape_process()
