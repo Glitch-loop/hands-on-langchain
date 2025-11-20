@@ -1,3 +1,4 @@
+from unittest import result
 from pydantic import BaseModel, Field
 from typing import Optional
 from langchain_openai import ChatOpenAI
@@ -21,6 +22,14 @@ template_generator_prompt = """
 
     > Usa el archivo para reconocer patrones y contexto que ayuden a extraer la información requerida y
     usa la información deseada para saber qué información extraer.
+"""
+
+
+template_validator_prompt =f"""
+    Eres un experto en extraer datos estructurados de documentos no estructurados.
+    Recibirás como entrada:
+    - El archivo del cual se extraerá la información.
+    - La información deseada en el esquema de salida.
 """
 
 json_desired_output = "D:\\DOCUMENTS\\self_study\\Agents\\langchain_learning\\automatic_program_engineering\\desired_output\\output_auto_qualitas.json"
@@ -52,12 +61,139 @@ class GeneralInvoiceInformation(BaseModel):
     adaptaciones: str     = Field(default="")
     version: str          = Field(default="")
     beneficiarioPreferente: str = Field(default="")
+
+# Auxiliar functions
+def safe_description(val):
+    # Ensure the description is a string and escape problematic quotes
+    if not isinstance(val, str):
+        val = str(val)
+    return val.replace('"', "'")
+
+# Processes 
+def auto_generate_prompt() -> dict:
+    prompt_template_dict = {}
     
+    # Selecting the model
+    llm = ChatOpenAI(
+        model="gpt-5",
+    )
+
+    # Create agent 
+    agent_template_generator = create_agent(
+        model=llm,
+        tools=[],
+        response_format=ProviderStrategy(GeneralInvoiceInformation),
+        middleware=[
+            FilesystemFileSearchMiddleware(
+                root_path="automatic_program_engineering/input_files/first_test/"
+                # max_files=1,
+            )
+        ],
+        system_prompt=template_generator_prompt,
+    )
+
+    # Desired output data. 
+    with open(json_desired_output, "r", encoding="utf-8") as f:
+        desired_output = json.load(f)
+
+
+    # Invoke agent to get prompt template.
+    result = agent_template_generator.invoke(
+        {
+            "messages": [
+                {
+                    "type": "developer",
+                    "content": f"""
+                        Aquí está la información en output_auto_qualitas.json
+                        {desired_output}
+                    """
+                }
+            ]
+        }
+    )
+
+    prompt_template = result.get("structured_response")
     
 
-# class VehicleInvoiceInformation(BaseModel): 
+    # If you want it as a dictionary:
+    if prompt_template:
+        prompt_template_dict = prompt_template.dict()
+    else:
+        print("No structured_response found in result.")
+
+    return prompt_template_dict
+    
+def extract_information_from_prompt(prompt_template_dict: dict, json_path: str):
+    # Selecting the model
+    llm = ChatOpenAI(
+        model="gpt-5",
+    )
+
+    class GeneralInvoiceInformationModified(BaseModel):
+        poliza: str             = Field(default="", description=safe_description(prompt_template_dict.get("poliza", "")))
+        inicioPeriodoVigencia: str    = Field(default="", description=safe_description(prompt_template_dict.get("inicioPeriodoVigencia", "")))
+        finalPeriodoVigencia: str    = Field(default="", description=safe_description(prompt_template_dict.get("finalPeriodoVigencia", "")))
+        aseguradora: str        = Field(default="", description=safe_description(prompt_template_dict.get("aseguradora", "")))
+        ramo: str               = Field(default="", description=safe_description(prompt_template_dict.get("ramo", "")))
+        subRamo: str            = Field(default="", description=safe_description(prompt_template_dict.get("subRamo", "")))
+        cobertura: str          = Field(default="", description=safe_description(prompt_template_dict.get("cobertura", "")))
+        formaDePago: str       = Field(default="", description=safe_description(prompt_template_dict.get("formaDePago", "")))
+        primaNeta: str         = Field(default="", description=safe_description(prompt_template_dict.get("primaNeta", "")))
+        primerPago: str        = Field(default="", description=safe_description(prompt_template_dict.get("primerPago", "")))
+        pagoPosterior: str     = Field(default="", description=safe_description(prompt_template_dict.get("pagoPosterior", "")))
+        descuento: str         = Field(default="", description=safe_description(prompt_template_dict.get("descuento", "")))
+        iva: str               = Field(default="", description=safe_description(prompt_template_dict.get("iva", "")))
+        tasaFinanciamiento: str = Field(default="", description=safe_description(prompt_template_dict.get("tasaFinanciamiento", "")))
+        derechoPoliza: str     = Field(default="", description=safe_description(prompt_template_dict.get("derechoPoliza", "")))
+        total: str             = Field(default="", description=safe_description(prompt_template_dict.get("total", "")))
+        cargoPorFinanciamiento: str = Field(default="", description=safe_description(prompt_template_dict.get("cargoPorFinanciamiento", "")))
+        rfcAsegurado: str     = Field(default="", description=safe_description(prompt_template_dict.get("rfcAsegurado", "")))
+        nombreAsegurado: str  = Field(default="", description=safe_description(prompt_template_dict.get("nombreAsegurado", "")))
+        numeroSerie: str      = Field(default="", description=safe_description(prompt_template_dict.get("numeroSerie", "")))
+        modelo: str           = Field(default="", description=safe_description(prompt_template_dict.get("modelo", "")))
+        numeroPlacas: str     = Field(default="", description=safe_description(prompt_template_dict.get("numeroPlacas", "")))
+        adaptaciones: str     = Field(default="", description=safe_description(prompt_template_dict.get("adaptaciones", "")))
+        version: str          = Field(default="", description=safe_description(prompt_template_dict.get("version", "")))
+        beneficiarioPreferente: str = Field(default="", description=safe_description(prompt_template_dict.get("beneficiarioPreferente", "")))
+
+    agent_template_validator = create_agent(
+        model=llm,
+        tools=[],
+        response_format=ProviderStrategy(GeneralInvoiceInformationModified),
+        middleware=[
+            FilesystemFileSearchMiddleware(
+                root_path="automatic_program_engineering/input_files/first_test/"
+                # max_files=1,
+            )
+        ],
+        system_prompt=template_validator_prompt,
+    )
+
+    result_validation = agent_template_validator.invoke({
+        "messages": [
+            {
+                "type": "developer",
+                "content": f"""
+                    Extrae la información de acuerdo con tu prompt.
+                """
+            }
+        ]
+    })
+
+    model_output = result_validation.get('structured_response')
+
+    if model_output:
+        model_output_dict = model_output.dict() if hasattr(model_output, 'dict') else model_output
+    else:
+        print("No structured_response found in result_validation.")
+        model_output_dict = {}
+    
+    return model_output_dict
 
 def execute_ape_proccess():
+
+    prompt_template_dict = auto_generate_prompt()
+
     # Selecting the model
     llm = ChatOpenAI(
         model="gpt-5",

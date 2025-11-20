@@ -1,5 +1,5 @@
 # Ignore all files in the input_files directory (invoices and other sensitive docs)
 automatic_program_engineering/input_files/
 
-
+.env
 
