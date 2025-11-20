@@ -8,17 +8,35 @@ import uuid
 import json
 import base64
 
+
+# Define prompt for automatic program engineering (APE).
+template_generator_prompt = """
+    Eres un experto en extraer datos estructurados de documentos no estructurados.
+
+    Recibirás como entrada:
+    - El archivo del cual se extraerá la información.
+    - La información deseada en el esquema de salida.
+
+    Tu tarea es generar una plantilla de prompt para cada campo del JSON.
+
+    > Usa el archivo para reconocer patrones y contexto que ayuden a extraer la información requerida y
+    usa la información deseada para saber qué información extraer.
+"""
+
+json_desired_output = "D:\\DOCUMENTS\\self_study\\Agents\\langchain_learning\\automatic_program_engineering\\desired_output\\output_auto_qualitas.json"
+
+# Define the data model to create the prompts.
 class GeneralInvoiceInformation(BaseModel):
-    poliza: str             = Field(default="")
-    inicioPeriodoVigencia: str    = Field(default="")
+    poliza: str                 = Field(default="", description="")
+    inicioPeriodoVigencia: str   = Field(default="")
     finalPeriodoVigencia: str    = Field(default="")
-    aseguradora: str        = Field(default="")
-    ramo: str               = Field(default="")
-    subRamo: str            = Field(default="")
-    cobertura: str          = Field(default="")
-    formaDePago: str       = Field(default="")
-    primaNeta: str         = Field(default="")
-    primerPago: str        = Field(default="")
+    aseguradora: str            = Field(default="")
+    ramo: str                   = Field(default="")
+    subRamo: str                = Field(default="")
+    cobertura: str              = Field(description="")
+    formaDePago: str           = Field(default="")
+    primaNeta: str             = Field(default="")
+    primerPago: str            = Field(default="")
     pagoPosterior: str     = Field(default="")
     descuento: str         = Field(default="")
     iva: str               = Field(default="")
@@ -36,28 +54,16 @@ class GeneralInvoiceInformation(BaseModel):
     beneficiarioPreferente: str = Field(default="")
     
     
-    
+
 # class VehicleInvoiceInformation(BaseModel): 
 
-def execute_ape_process():
-    # Create agent
+def execute_ape_proccess():
+    # Selecting the model
     llm = ChatOpenAI(
         model="gpt-5",
     )
 
-    template_generator_prompt = """
-    Eres un experto en extraer datos estructurados de documentos no estructurados.
-
-    Recibirás como entrada:
-    - El archivo del cual se extraerá la información.
-    - La información deseada en el esquema de salida.
-
-    Tu tarea es generar una plantilla de prompt para cada campo del JSON.
-
-    > Usa el archivo para reconocer patrones y contexto que ayuden a extraer la información requerida y
-    usa la información deseada para saber qué información extraer.
-"""
-
+    # Create agent 
     agent_template_generator = create_agent(
         model=llm,
         tools=[],
@@ -71,20 +77,8 @@ def execute_ape_process():
         system_prompt=template_generator_prompt,
     )
 
-    # agent_template_validator = create_agent(
-
-    # )
-
-    # Inserting data.
-    # Read PDF file (Auto Qualitas)
-    # with open("automatic_program_engineering/input_files/polizas prueba/Auto Qualitas.pdf", "rb") as f:
-    #     encoded = base64.b64encode(f.read()).decode("utf-8")
-
-
-    # Desired output data.
-    # Read output JSON
-    json_path = "D:\\DOCUMENTS\\self_study\\Agents\\langchain_learning\\automatic_program_engineering\\desired_output\\output_auto_qualitas.json"
-    with open(json_path, "r", encoding="utf-8") as f:
+    # Extracting the desired output data. 
+    with open(json_desired_output, "r", encoding="utf-8") as f:
         desired_output = json.load(f)
 
     # Get prompt template.

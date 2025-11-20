@@ -4,14 +4,18 @@ import json
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from langchain.agents.structured_output import ProviderStrategy
-
 import base64
 
-def safe_description(val):
-    # Ensure the description is a string and escape problematic quotes
-    if not isinstance(val, str):
-        val = str(val)
-    return val.replace('"', "'")
+template_validator_prompt =f"""
+    Eres un experto en extraer datos estructurados de documentos no estructurados.
+
+    # Utiliza la base de datos vectorial para encontrar la información que se te solicita del documento.
+
+    Antes de dar la respuesta, asegura que todos los campos del esquema esten llenos,
+    si es necesario revisa varias veces el documento para encontrar la información correcta.
+
+    # El cliente valora mas la precisión que la rapidez, así que tómate tu tiempo para validar cada campo.
+    """
 
 prompt_template_dict = {
     "poliza": "Extrae el número de póliza principal del documento de QUÁLITAS. Busca etiquetas como: \"Póliza\", \"Póliza No.\", \"No. de póliza\", \"Núm. de póliza\". Reglas: 1) Prioriza el número ubicado en el encabezado o cerca del logo/razón social de QUÁLITAS. 2) Excluye números de endoso, cotización o siniestro. 3) Devuelve solo dígitos sin espacios ni guiones. 4) Si hay varios, toma el de mayor prominencia o el que esté junto a la palabra Póliza. Si no existe, devuelve cadena vacía.",
@@ -41,6 +45,12 @@ prompt_template_dict = {
     "beneficiarioPreferente": "Extrae el Beneficiario/Acreedor preferente (por ejemplo, una institución financiera). Busca: \"Beneficiario preferente\", \"Acreedor preferente\". Si hay varios, devuelve el primero principal. Devuelve solo el nombre de la entidad. Si no existe, cadena vacía."
   }
 
+def safe_description(val):
+    # Ensure the description is a string and escape problematic quotes
+    if not isinstance(val, str):
+        val = str(val)
+    return val.replace('"', "'")
+
 class InvoiceInformation(BaseModel):
     poliza: str             = Field(default="", description=safe_description(prompt_template_dict.get("poliza", "")))
     inicioPeriodoVigencia: str    = Field(default="", description=safe_description(prompt_template_dict.get("inicioPeriodoVigencia", "")))
@@ -69,20 +79,10 @@ class InvoiceInformation(BaseModel):
     beneficiarioPreferente: str = Field(default="", description=safe_description(prompt_template_dict.get("beneficiarioPreferente", "")))
 
 def execute_test():
-    llm = ChatOpenAI(model="gpt-5")
-
-    template_validator_prompt =f"""
-    Eres un experto en extraer datos estructurados de documentos no estructurados.
-    Recibirás como entrada:
-    - El archivo del cual se extraerá la información.
-    - La información deseada en el esquema de salida.
-
-    Antes de dar la respuesta, asegura que todos los campos del esquema esten llenos,
-    si es necesario revisa varias veces el documento para encontrar la información correcta.
-
-    # El cliente valora mas la precisión que la rapidez, así que tómate tu tiempo para validar cada campo.
-    """
-
+    # gpt-5 is not the best for extracting information.
+    llm = ChatOpenAI(model="gpt-4.1").bind_tools([
+         {"type": "file_search", "vector_store_ids": ["vs_691f5a8294bc8191b0d872bf3d4c2cfb"]}
+    ])
 
     agent_template_validator = create_agent(
         model=llm,
@@ -91,56 +91,50 @@ def execute_test():
         system_prompt=template_validator_prompt
     )
 
-    with open("D:\\DOCUMENTS\\self_study\\Agents\\langchain_learning\\automatic_program_engineering\\input_files\\polizas prueba\\Auto Qualitas.pdf", "rb") as f:
-        encoded = base64.b64encode(f.read()).decode("utf-8")
+    # with open("D:\\DOCUMENTS\\self_study\\Agents\\langchain_learning\\automatic_program_engineering\\input_files\\polizas prueba\\Auto Qualitas.pdf", "rb") as f:
+    #     encoded = base64.b64encode(f.read()).decode("utf-8")
 
-        result_validation = agent_template_validator.invoke({
-            "messages": [
-                {
-                    "type": "user",
-                    "content": "Por favor, extrae la información del archivo adjunto."
-                }
-            ],
-            "files": [
-                {
-                    "file_name": "Auto Qualitas.pdf",
-                    "file_data": encoded  # Just the base64 string, not the data:... prefix
-                }
-            ]
-        })
-
-        # Use the actual model output from result_validation
-        json_path = "D:\\DOCUMENTS\\self_study\\Agents\\langchain_learning\\automatic_program_engineering\\desired_output\\output_auto_qualitas.json"
-        with open(json_path, "r", encoding="utf-8") as f:
-            reference_output = json.load(f)
-
-        print(result_validation.get('structured_response'))
-        model_output = result_validation.get('structured_response')
-        if model_output:
-            model_output_dict = model_output.dict() if hasattr(model_output, 'dict') else model_output
-        else:
-            print("No structured_response found in result_validation.")
-            model_output_dict = {}
-
-        # Compare each field
-        comparison = {}
-        for key in reference_output:
-            ref_val = reference_output[key]
-            model_val = model_output_dict.get(key, None)
-            comparison[key] = {
-                "expected": ref_val,
-                "actual": model_val,
-                "match": ref_val == model_val
+    result_validation = agent_template_validator.invoke({
+        "messages": [
+            {
+                "type": "user",
+                "content": "Extrae la información que se te solicita usando la base de datos vectorial."
             }
+        ]
+    })
 
-        print("\nField-by-field comparison:")
-        for k, v in comparison.items():
-            print(f"{k}: expected={v['expected']} | actual={v['actual']} | match={v['match']}")
+    # Use the actual model output from result_validation
+    json_path = "D:\\DOCUMENTS\\self_study\\Agents\\langchain_learning\\automatic_program_engineering\\desired_output\\output_auto_qualitas.json"
+    with open(json_path, "r", encoding="utf-8") as f:
+        reference_output = json.load(f)
 
-        total = len(comparison)
-        correct = sum(1 for v in comparison.values() if v["match"])
-        accuracy = correct / total if total > 0 else 0.0
-        print(f"\nOverall accuracy: {accuracy*100:.2f}% ({correct}/{total} fields correct)")
+    print(result_validation.get('structured_response'))
+    model_output = result_validation.get('structured_response')
+    if model_output:
+        model_output_dict = model_output.dict() if hasattr(model_output, 'dict') else model_output
+    else:
+        print("No structured_response found in result_validation.")
+        model_output_dict = {}
+
+    # Compare each field
+    comparison = {}
+    for key in reference_output:
+        ref_val = reference_output[key]
+        model_val = model_output_dict.get(key, None)
+        comparison[key] = {
+            "expected": ref_val,
+            "actual": model_val,
+            "match": ref_val == model_val
+        }
+
+    print("\nField-by-field comparison:")
+    for k, v in comparison.items():
+        print(f"{k}: expected={v['expected']} | actual={v['actual']} | match={v['match']}")
+
+    total = len(comparison)
+    correct = sum(1 for v in comparison.values() if v["match"])
+    accuracy = correct / total if total > 0 else 0.0
+    print(f"\nOverall accuracy: {accuracy*100:.2f}% ({correct}/{total} fields correct)")
 
 
 execute_test()
