@@ -9,12 +9,9 @@ import base64
 template_validator_prompt =f"""
     Eres un experto en extraer datos estructurados de documentos no estructurados.
 
-    # Utiliza la base de datos vectorial para encontrar la información que se te solicita del documento.
+    # Utiliza la base de datos vectorial y el archivo adjuntado en el mensaje del usuario para encontrar la información que se te solicita.
 
-    Antes de dar la respuesta, asegura que todos los campos del esquema esten llenos,
-    si es necesario revisa varias veces el documento para encontrar la información correcta.
-
-    # El cliente valora mas la precisión que la rapidez, así que tómate tu tiempo para validar cada campo.
+    # El cliente valora mas la "precisión" que la rapidez, así que tómate tu tiempo para validar cada campo.
     """
 
 prompt_template_dict = {
@@ -51,43 +48,52 @@ def safe_description(val):
         val = str(val)
     return val.replace('"', "'")
 
-class InvoiceInformation(BaseModel):
-    poliza: str             = Field(default="", description=safe_description(prompt_template_dict.get("poliza", "")))
-    inicioPeriodoVigencia: str    = Field(default="", description=safe_description(prompt_template_dict.get("inicioPeriodoVigencia", "")))
-    finalPeriodoVigencia: str    = Field(default="", description=safe_description(prompt_template_dict.get("finalPeriodoVigencia", "")))
-    aseguradora: str        = Field(default="", description=safe_description(prompt_template_dict.get("aseguradora", "")))
-    ramo: str               = Field(default="", description=safe_description(prompt_template_dict.get("ramo", "")))
-    subRamo: str            = Field(default="", description=safe_description(prompt_template_dict.get("subRamo", "")))
-    cobertura: str          = Field(default="", description=safe_description(prompt_template_dict.get("cobertura", "")))
-    formaDePago: str       = Field(default="", description=safe_description(prompt_template_dict.get("formaDePago", "")))
-    primaNeta: str         = Field(default="", description=safe_description(prompt_template_dict.get("primaNeta", "")))
-    primerPago: str        = Field(default="", description=safe_description(prompt_template_dict.get("primerPago", "")))
-    pagoPosterior: str     = Field(default="", description=safe_description(prompt_template_dict.get("pagoPosterior", "")))
-    descuento: str         = Field(default="", description=safe_description(prompt_template_dict.get("descuento", "")))
-    iva: str               = Field(default="", description=safe_description(prompt_template_dict.get("iva", "")))
-    tasaFinanciamiento: str = Field(default="", description=safe_description(prompt_template_dict.get("tasaFinanciamiento", "")))
-    derechoPoliza: str     = Field(default="", description=safe_description(prompt_template_dict.get("derechoPoliza", "")))
-    total: str             = Field(default="", description=safe_description(prompt_template_dict.get("total", "")))
-    cargoPorFinanciamiento: str = Field(default="", description=safe_description(prompt_template_dict.get("cargoPorFinanciamiento", "")))
-    rfcAsegurado: str     = Field(default="", description=safe_description(prompt_template_dict.get("rfcAsegurado", "")))
-    nombreAsegurado: str  = Field(default="", description=safe_description(prompt_template_dict.get("nombreAsegurado", "")))
-    numeroSerie: str      = Field(default="", description=safe_description(prompt_template_dict.get("numeroSerie", "")))
-    modelo: str           = Field(default="", description=safe_description(prompt_template_dict.get("modelo", "")))
-    numeroPlacas: str     = Field(default="", description=safe_description(prompt_template_dict.get("numeroPlacas", "")))
-    adaptaciones: str     = Field(default="", description=safe_description(prompt_template_dict.get("adaptaciones", "")))
-    version: str          = Field(default="", description=safe_description(prompt_template_dict.get("version", "")))
-    beneficiarioPreferente: str = Field(default="", description=safe_description(prompt_template_dict.get("beneficiarioPreferente", "")))
+class GeneralInvoiceInformation(BaseModel):
+    poliza: str = Field(default="", description="Plantilla de prompt: Extrae el número de póliza del texto. Busca etiquetas como: PÓLIZA, No. de póliza, PÓLIZA No., PÓLIZA:. Prioriza el valor del encabezado o del bloque de identificación de la póliza. Devuelve solo el número sin texto adicional ni espacios. Si hay varias pólizas, devuelve la correspondiente al vehículo descrito en el documento. Si no se encuentra, devuelve vacío.")
+    inicioPeriodoVigencia: str = Field(default="", description="Plantilla de prompt: Extrae la fecha de inicio de vigencia de la póliza. Busca frases como: Vigencia del... al..., Inicio de vigencia, Desde, Vigencia: del. Si aparece el rango del X al Y, toma X como inicio. Convierte la fecha a timestamp Unix en segundos a las 00:00:00 hora America/Mexico_City. Acepta formatos dd/mm/aaaa, dd-mm-aaaa, y con mes en texto. Devuelve solo el número. Si no se encuentra, devuelve vacío. ")
+    finalPeriodoVigencia: str = Field(default="", description="Plantilla de prompt: Extrae la fecha de fin de vigencia de la póliza. Busca frases como: Vigencia del... al..., Fin de vigencia, Hasta, Vigente hasta. Si aparece el rango del X al Y, toma Y como fin. Convierte la fecha a timestamp Unix en segundos a las 00:00:00 hora America/Mexico_City. Devuelve solo el número. Si no se encuentra, devuelve vacío. ")
+    aseguradora: str = Field(default="", description="Plantilla de prompt: Identifica el nombre de la aseguradora emisora. Busca en encabezado, logotipo y razón social: QUÁLITAS, Quálitas Compañía de Seguros, S.A. de C.V., Qualitas. Normaliza a QUÁLITAS. Devuelve solo el nombre normalizado. Si no se encuentra, devuelve vacío.")
+    ramo: str = Field(default="", description="Plantilla de prompt: Extrae el ramo del seguro. Busca etiquetas como: Ramo, Línea de negocio. En pólizas de auto suele ser Automóviles o Autos. Si no hay etiqueta explícita pero aparece información vehicular (VIN/NIV de 17 caracteres, placas, modelo), establece Automóviles. Devuelve solo el valor del ramo. Si no procede, devuelve vacío.")
+    subRamo: str = Field(default="", description="Plantilla de prompt: Extrae el subramo o uso. Busca etiquetas como: Subramo, Uso, Tipo de uso, Residente/Turista, Particular/Servicio Público. Devuelve el texto tal como aparece, en mayúsculas. Si no se encuentra, devuelve vacío.")
+    cobertura: str = Field(default="", description="Plantilla de prompt: Extrae el plan/paquete de cobertura contratada. Busca etiquetas: Cobertura, Paquete, Plan, con valores típicos Amplia, Limitada, Responsabilidad Civil, RC. Si hay varias menciones, toma la que esté junto a la identificación del vehículo o del contrato. Devuelve solo el nombre de la cobertura. Si no se encuentra, devuelve vacío.")
+    formaDePago: str = Field(default="", description="Plantilla de prompt: Extrae la forma de pago. Busca etiquetas: Forma de pago, Plan de pagos, Modalidad de pago. Normaliza a uno de: CONTADO, MENSUAL, BIMESTRAL, TRIMESTRAL, SEMESTRAL, ANUAL, FINANCIADO. Si se menciona una tarjeta o banco pero no la periodicidad, usa CONTADO si se observa un único pago total. Devuelve solo el valor normalizado. Si no se encuentra, devuelve vacío.")
+    primaNeta: str = Field(default="", description="Plantilla de prompt: Extrae el importe de Prima Neta. Busca etiquetas: Prima Neta, Subtotal prima. Elige el monto del desglose de primas, no el total. Normaliza eliminando símbolo de moneda y espacios; conserva signo si existe y dos decimales con punto. Devuelve solo el número como texto. Si no se encuentra, devuelve vacío. ")
+    primerPago: str = Field(default="", description="Plantilla de prompt: Extrae el monto del Primer Pago. Busca etiquetas: Primer pago, Primer pago con inscripción o similar. Si la forma de pago es CONTADO, el Primer Pago suele ser igual al Total. Normaliza eliminando símbolo de moneda y separadores de miles; dos decimales con punto. Devuelve solo el número como texto. Si no se encuentra, devuelve vacío. ")
+    pagoPosterior: str = Field(default="", description="Plantilla de prompt: Extrae el monto de Pago(s) Posterior(es). Busca etiquetas: Pagos posteriores, Pago(s) posterior(es), Pagos subsecuentes. Si la forma de pago es CONTADO, devuelve 0. Si aparecen varios pagos posteriores, devuelve el importe unitario por pago, no la suma. Normaliza a número con dos decimales y punto. Devuelve solo el número como texto o 0 si no aplica. ")
+    descuento: str = Field(default="", description="Plantilla de prompt: Extrae el total de Descuento(s) aplicados. Busca etiquetas: Descuento, Bonificación, Promoción en el desglose. Si hay múltiples descuentos, suma sus importes. Normaliza a número con dos decimales, punto decimal y sin símbolo de moneda. Si no hay descuento, devuelve 0. Devuelve solo el número como texto. ")
+    iva: str = Field(default="", description="Plantilla de prompt: Extrae el IVA del desglose de primas. Busca etiquetas: IVA, Impuesto al Valor Agregado y toma el monto (no el porcentaje). Normaliza a número con dos decimales y punto. Devuelve solo el número como texto. Si no aplica, devuelve 0. ")
+    tasaFinanciamiento: str = Field(default="", description="Plantilla de prompt: Extrae el importe monetario por financiamiento (recargo o descuento). Busca etiquetas: Tasa de financiamiento, Recargo por financiamiento, Intereses por financiamiento en el desglose económico. Si aparece también un porcentaje, devuelve el monto en dinero, conservando el signo si es descuento (negativo). Normaliza a número con dos decimales y punto. Si no aplica, devuelve 0. ")
+    derechoPoliza: str = Field(default="", description="Plantilla de prompt: Extrae el importe de Derecho de Póliza (gastos de expedición). Busca etiquetas: Derecho de póliza, Gastos de expedición. Normaliza a número con dos decimales, punto decimal. Devuelve solo el número como texto. Si no aparece, devuelve 0. ")
+    total: str = Field(default="", description="Plantilla de prompt: Extrae el Total a pagar de la póliza. Busca etiquetas: Total, Total a pagar, Prima total y toma el gran total del recibo o desglose. Normaliza a número con dos decimales y punto. Devuelve solo el número como texto. Si hay varios totales (por pagos parciales), elige el total del periodo actual contratado. ")
+    cargoPorFinanciamiento: str = Field(default="", description="Plantilla de prompt: Extrae el Cargo por Financiamiento si se presenta como línea separada del desglose. Busca etiquetas: Cargo por financiamiento, Recargo por financiamiento. Prioriza el monto monetario, no el porcentaje. Normaliza a número con dos decimales y punto. Si no existe o ya está reflejado en otra línea, devuelve 0. ")
+    rfcAsegurado: str = Field(default="", description="Plantilla de prompt: Extrae el RFC del Asegurado. Busca en secciones: Datos del asegurado o Contratante con etiqueta RFC. Prioriza el RFC del Asegurado; si no existe, usa el del Contratante. Valida formato mexicano de 12 o 13 caracteres alfanuméricos (con homoclave). Devuelve en mayúsculas sin espacios. Si no se encuentra, devuelve vacío.")
+    nombreAsegurado: str = Field(default="", description="Plantilla de prompt: Extrae el nombre del Asegurado. Busca etiquetas: Asegurado, Nombre del asegurado. Si no aparece, usa el Contratante. Evita capturar el nombre del agente o beneficiario. Devuelve el nombre completo tal como aparece, en mayúsculas si así está. Si no se encuentra, devuelve vacío.")
+    numeroSerie: str = Field(default="", description="Plantilla de prompt: Extrae el Número de Serie del vehículo (VIN/NIV). Busca etiquetas: Número de serie, No. de serie, VIN, NIV. Debe ser un identificador alfanumérico de 17 caracteres. Devuelve en mayúsculas, sin espacios. Si no se encuentra, devuelve vacío.")
+    modelo: str = Field(default="", description="Plantilla de prompt: Extrae el modelo/año del vehículo. Busca etiquetas: Modelo, Año modelo, Año junto con el vehículo. Devuelve cuatro dígitos (aaaa). Si hay varios años (fabricación/modelo), elige el Modelo. Si no se encuentra, devuelve vacío.")
+    numeroPlacas: str = Field(default="", description="Plantilla de prompt: Extrae el número de placas del vehículo. Busca etiquetas: Placas, No. de placa(s). Devuelve el texto alfanumérico en mayúsculas, sin espacios adicionales. Si no se encuentra, devuelve vacío.")
+    adaptaciones: str = Field(default="", description="Plantilla de prompt: Extrae las Adaptaciones o Equipo Especial del vehículo si existen. Busca etiquetas: Adaptaciones, Equipo especial. Si aparece N/A, No aplica o está en blanco, devuelve vacío. Devuelve el texto tal como aparece (hasta 100 caracteres). Si no se encuentra, devuelve vacío.")
+    version: str = Field(default="", description="Plantilla de prompt: Extrae la Versión o Clave de versión del vehículo. Busca etiquetas: Versión, Clave versión, Vers. Puede ser un código numérico o alfanumérico. Devuelve el valor sin etiquetas. Si no se encuentra, devuelve vacío.")
+    beneficiarioPreferente: str = Field(default="", description="Plantilla de prompt: Extrae el Beneficiario Preferente o Acreedor Prendario. Busca etiquetas: Beneficiario preferente, Acreedor prendario, Beneficiario en la sección de datos financieros del vehículo. Devuelve el nombre de la institución si existe. Si no aplica o está vacío, devuelve vacío.")
 
 def execute_test():
     # gpt-5 is not the best for extracting information.
-    llm = ChatOpenAI(model="gpt-4.1").bind_tools([
-         {"type": "file_search", "vector_store_ids": ["vs_691f5a8294bc8191b0d872bf3d4c2cfb"]}
+    vector_database = "vs_691f5a8294bc8191b0d872bf3d4c2cfb" # Personal database
+
+    # gpt-5.1-2025-11-13 - 32%
+    # gpt-4.1-2025-04-14 - 52.00% 
+    llm = ChatOpenAI(model="gpt-4.1-2025-04-14").bind_tools([
+         {
+            "type": "file_search", "vector_store_ids": 
+            [
+                vector_database
+            ]
+        }
     ])
 
     agent_template_validator = create_agent(
         model=llm,
         tools=[],
-        response_format=ProviderStrategy(InvoiceInformation),
+        response_format=ProviderStrategy(GeneralInvoiceInformation),
         system_prompt=template_validator_prompt
     )
 
@@ -98,11 +104,15 @@ def execute_test():
         "messages": [
             {
                 "type": "user",
-                "content": "Extrae la información que se te solicita usando la base de datos vectorial."
+                "content": "Extrae la información que se te solicita usando la base de datos vectorial y el archivo adjunto."
             }
+        ],
+        "files": [
+            "file-8Qz9RuWugdi3gqLMXh54pz"
         ]
     })
 
+    print("Result from validation agent: ", result_validation)
     # Use the actual model output from result_validation
     json_path = "D:\\DOCUMENTS\\self_study\\Agents\\langchain_learning\\automatic_program_engineering\\desired_output\\output_auto_qualitas.json"
     with open(json_path, "r", encoding="utf-8") as f:
