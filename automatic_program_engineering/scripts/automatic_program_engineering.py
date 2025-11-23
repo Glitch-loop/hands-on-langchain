@@ -12,20 +12,35 @@ import os
 
 # Define prompt for automatic program engineering (APE).
 template_generator_prompt = """
+    Eres un experto prompt engineer especializado en extraer datos estructurados de documentos no estructurados.
+
+    Recibirás como entrada:
+        - El archivo del cual se extraerá la información.
+        - La información deseada en el esquema de salida.
+
+    Instrucciónes:
+    1. Analiza los campos de la salida estructurada.
+    2. En el JSON que se te proporciona, localiza el output del campo correspondiente.
+    3. Una vez localizado, encuentra en que parte del documento está esa información.
+    4. Genera una plantilla de prompt detallada para cada campo, enfocándote en patrones y diseño del documento.
+    5. Evita dar ejemplos de salidas en la descripción.
+"""
+
+"""
     Eres un experto en extraer datos estructurados de documentos no estructurados.
 
     Recibirás como entrada:
     - El archivo del cual se extraerá la información.
     - La información deseada en el esquema de salida.
 
-    # Tu tarea es generar una plantilla de prompt para cada campo del JSON.
+    # Tu tarea es generar una plantilla de prompt para cada campo de la salida estructurada.
 
-    > Usa el archivo para reconocer patrones y contexto que ayuden a extraer la información requerida y
-    usa la información deseada para saber qué información extraer.
+    > Enfócate mas en los patrones y diseño del documento mas que en obtener los valores específicos.
+    > Esta descripción será de mucha ayuda para que en proximas llamadas sepas donde esta "localizada" la información correctamente.
 
-    > También, se te proporcionará mensajes adicionales con iteraciones pasadas, que pueden ayudarte a mejorar la plantilla de prompt.
-    > Tu objetivo es elevar la precisión lo más posible.
+    Tomate tu tiempo para dar una descripción detallada para cada campo en el esquema de salida.
 
+    # Evita dar ejemplo de salidas en la descripción.
 """
 
 
@@ -36,35 +51,35 @@ template_validator_prompt =f"""
     - La información deseada en el esquema de salida.
 """
 
-json_desired_output = "D:\\DOCUMENTS\\self_study\\Agents\\langchain_learning\\automatic_program_engineering\\desired_output\\output_auto_qualitas.json"
+json_desired_output = "D:\\DOCUMENTS\\self_study\\Agents\\langchain_learning\\automatic_program_engineering\\desired_output\\output_auto_chubb.json"
 
 # Define the data model to create the prompts.
 class GeneralInvoiceInformation(BaseModel):
-    poliza: str                 = Field(default="", description="")
+    poliza: str                 = Field(default="")
     inicioPeriodoVigencia: str   = Field(default="")
     finalPeriodoVigencia: str    = Field(default="")
-    aseguradora: str            = Field(default="")
-    ramo: str                   = Field(default="")
-    subRamo: str                = Field(default="")
-    cobertura: str              = Field(description="")
-    formaDePago: str           = Field(default="")
-    primaNeta: str             = Field(default="")
-    primerPago: str            = Field(default="")
-    pagoPosterior: str     = Field(default="")
-    descuento: str         = Field(default="")
-    iva: str               = Field(default="")
-    tasaFinanciamiento: str = Field(default="")
-    derechoPoliza: str     = Field(default="")
-    total: str             = Field(default="")
-    cargoPorFinanciamiento: str = Field(default="")
-    rfcAsegurado: str     = Field(default="")
-    nombreAsegurado: str  = Field(default="")
-    numeroSerie: str      = Field(default="")
-    modelo: str           = Field(default="")
-    numeroPlacas: str     = Field(default="")
-    adaptaciones: str     = Field(default="")
-    version: str          = Field(default="")
-    beneficiarioPreferente: str = Field(default="")
+    # aseguradora: str            = Field(default="")
+    # ramo: str                   = Field(default="")
+    # subRamo: str                = Field(default="")
+    # cobertura: str              = Field(description="")
+    # formaDePago: str           = Field(default="")
+    # primaNeta: str             = Field(default="")
+    # primerPago: str            = Field(default="")
+    # pagoPosterior: str     = Field(default="")
+    # descuento: str         = Field(default="")
+    # iva: str               = Field(default="")
+    # tasaFinanciamiento: str = Field(default="")
+    # derechoPoliza: str     = Field(default="")
+    # total: str             = Field(default="")
+    # cargoPorFinanciamiento: str = Field(default="")
+    # rfcAsegurado: str     = Field(default="")
+    # nombreAsegurado: str  = Field(default="")
+    # numeroSerie: str      = Field(default="")
+    # modelo: str           = Field(default="")
+    # numeroPlacas: str     = Field(default="")
+    # adaptaciones: str     = Field(default="")
+    # version: str          = Field(default="")
+    # beneficiarioPreferente: str = Field(default="")
 
 # Auxiliar functions
 def safe_description(val):
@@ -83,7 +98,7 @@ def auto_generate_prompt(messages: list[LangChainMessage]) -> dict:
 
     # Selecting the model
     llm = ChatOpenAI(
-        model="gpt-4.1",
+        model="gpt-5.1-2025-11-13",
     )
 
     # Create agent 
@@ -110,7 +125,7 @@ def auto_generate_prompt(messages: list[LangChainMessage]) -> dict:
         LangChainMessage(
             role="developer",
             content=f"""
-                Aquí está la información en output_auto_qualitas.json
+                Aquí está la información en output_auto_chubb.json
                 {desired_output}
             """
         )
@@ -122,7 +137,7 @@ def auto_generate_prompt(messages: list[LangChainMessage]) -> dict:
                 {
                     "type": "developer",
                     "content": f"""
-                        Aquí está la información en output_auto_qualitas.json
+                        Aquí está la información en output_auto_chubb.json
                         {desired_output}
                     """
                 }
@@ -148,30 +163,30 @@ def extract_information_from_prompt(prompt_template_dict: dict) -> dict:
     )
 
     class GeneralInvoiceInformationModified(BaseModel):
-        poliza: str             = Field(default="", description=safe_description(prompt_template_dict.get("poliza", "")))
-        inicioPeriodoVigencia: str    = Field(default="", description=safe_description(prompt_template_dict.get("inicioPeriodoVigencia", "")))
-        finalPeriodoVigencia: str    = Field(default="", description=safe_description(prompt_template_dict.get("finalPeriodoVigencia", "")))
-        aseguradora: str        = Field(default="", description=safe_description(prompt_template_dict.get("aseguradora", "")))
-        ramo: str               = Field(default="", description=safe_description(prompt_template_dict.get("ramo", "")))
-        subRamo: str            = Field(default="", description=safe_description(prompt_template_dict.get("subRamo", "")))
-        cobertura: str          = Field(default="", description=safe_description(prompt_template_dict.get("cobertura", "")))
-        formaDePago: str       = Field(default="", description=safe_description(prompt_template_dict.get("formaDePago", "")))
-        primaNeta: str         = Field(default="", description=safe_description(prompt_template_dict.get("primaNeta", "")))
-        primerPago: str        = Field(default="", description=safe_description(prompt_template_dict.get("primerPago", "")))
-        pagoPosterior: str     = Field(default="", description=safe_description(prompt_template_dict.get("pagoPosterior", "")))
-        descuento: str         = Field(default="", description=safe_description(prompt_template_dict.get("descuento", "")))
-        iva: str               = Field(default="", description=safe_description(prompt_template_dict.get("iva", "")))
-        tasaFinanciamiento: str = Field(default="", description=safe_description(prompt_template_dict.get("tasaFinanciamiento", "")))
-        derechoPoliza: str     = Field(default="", description=safe_description(prompt_template_dict.get("derechoPoliza", "")))
-        total: str             = Field(default="", description=safe_description(prompt_template_dict.get("total", "")))
+        poliza: str                 = Field(default="", description=safe_description(prompt_template_dict.get("poliza", "")))
+        inicioPeriodoVigencia: str  = Field(default="", description=safe_description(prompt_template_dict.get("inicioPeriodoVigencia", "")))
+        finalPeriodoVigencia: str   = Field(default="", description=safe_description(prompt_template_dict.get("finalPeriodoVigencia", "")))
+        aseguradora: str            = Field(default="", description=safe_description(prompt_template_dict.get("aseguradora", "")))
+        ramo: str                   = Field(default="", description=safe_description(prompt_template_dict.get("ramo", "")))
+        subRamo: str                = Field(default="", description=safe_description(prompt_template_dict.get("subRamo", "")))
+        cobertura: str              = Field(default="", description=safe_description(prompt_template_dict.get("cobertura", "")))
+        formaDePago: str            = Field(default="", description=safe_description(prompt_template_dict.get("formaDePago", "")))
+        primaNeta: str              = Field(default="", description=safe_description(prompt_template_dict.get("primaNeta", "")))
+        primerPago: str             = Field(default="", description=safe_description(prompt_template_dict.get("primerPago", "")))
+        pagoPosterior: str          = Field(default="", description=safe_description(prompt_template_dict.get("pagoPosterior", "")))
+        descuento: str              = Field(default="", description=safe_description(prompt_template_dict.get("descuento", "")))
+        iva: str                    = Field(default="", description=safe_description(prompt_template_dict.get("iva", "")))
+        tasaFinanciamiento: str     = Field(default="", description=safe_description(prompt_template_dict.get("tasaFinanciamiento", "")))
+        derechoPoliza: str          = Field(default="", description=safe_description(prompt_template_dict.get("derechoPoliza", "")))
+        total: str                  = Field(default="", description=safe_description(prompt_template_dict.get("total", "")))
         cargoPorFinanciamiento: str = Field(default="", description=safe_description(prompt_template_dict.get("cargoPorFinanciamiento", "")))
-        rfcAsegurado: str     = Field(default="", description=safe_description(prompt_template_dict.get("rfcAsegurado", "")))
-        nombreAsegurado: str  = Field(default="", description=safe_description(prompt_template_dict.get("nombreAsegurado", "")))
-        numeroSerie: str      = Field(default="", description=safe_description(prompt_template_dict.get("numeroSerie", "")))
-        modelo: str           = Field(default="", description=safe_description(prompt_template_dict.get("modelo", "")))
-        numeroPlacas: str     = Field(default="", description=safe_description(prompt_template_dict.get("numeroPlacas", "")))
-        adaptaciones: str     = Field(default="", description=safe_description(prompt_template_dict.get("adaptaciones", "")))
-        version: str          = Field(default="", description=safe_description(prompt_template_dict.get("version", "")))
+        rfcAsegurado: str           = Field(default="", description=safe_description(prompt_template_dict.get("rfcAsegurado", "")))
+        nombreAsegurado: str        = Field(default="", description=safe_description(prompt_template_dict.get("nombreAsegurado", "")))
+        numeroSerie: str            = Field(default="", description=safe_description(prompt_template_dict.get("numeroSerie", "")))
+        modelo: str                 = Field(default="", description=safe_description(prompt_template_dict.get("modelo", "")))
+        numeroPlacas: str           = Field(default="", description=safe_description(prompt_template_dict.get("numeroPlacas", "")))
+        adaptaciones: str           = Field(default="", description=safe_description(prompt_template_dict.get("adaptaciones", "")))
+        version: str                = Field(default="", description=safe_description(prompt_template_dict.get("version", "")))
         beneficiarioPreferente: str = Field(default="", description=safe_description(prompt_template_dict.get("beneficiarioPreferente", "")))
 
     agent_template_validator = create_agent(
