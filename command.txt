@@ -1,1 +1,4 @@
- py -m automatic_program_engineering.scripts.prompt_validation   
+py -m automatic_program_engineering.scripts.prompt_validation
+py -m automatic_program_engineering.scripts.automatic_program_engineering
+
+$env:OPENAI_API_KEY = ""

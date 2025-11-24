@@ -1,0 +1,23 @@
+{
+  "poliza": {
+    "expected": "GO42001981",
+    "actual": "GO42001981",
+    "match": true
+  },
+  "inicioPeriodoVigencia": {
+    "expected": "2022-07-06T12:00:00-06:00",
+    "actual": "2022-07-06T12:00:00-06:00",
+    "match": true
+  },
+  "finalPeriodoVigencia": {
+    "expected": "2023-07-06T12:00:00-06:00",
+    "actual": "2023-07-06T12:00:00-06:00",
+    "match": true
+  },
+  "aseguradora": {
+    "expected": "CHUBB",
+    "actual": "CHUBB Seguros México, S.A.",
+    "match": false
+  },
+  "overall_accuracy": 0.75
+}

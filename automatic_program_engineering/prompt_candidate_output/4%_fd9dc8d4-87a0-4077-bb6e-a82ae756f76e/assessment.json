@@ -1,0 +1,128 @@
+{
+  "poliza": {
+    "expected": "GO42001981",
+    "actual": "302040112",
+    "match": false
+  },
+  "inicioPeriodoVigencia": {
+    "expected": "2022-07-06T12:00:00-06:00",
+    "actual": "16/04/2024 12:00 hrs",
+    "match": false
+  },
+  "finalPeriodoVigencia": {
+    "expected": "2023-07-06T12:00:00-06:00",
+    "actual": "16/04/2025 12:00 hrs",
+    "match": false
+  },
+  "aseguradora": {
+    "expected": "CHUBB",
+    "actual": "CHUBB",
+    "match": true
+  },
+  "ramo": {
+    "expected": "",
+    "actual": null,
+    "match": false
+  },
+  "subRamo": {
+    "expected": "",
+    "actual": null,
+    "match": false
+  },
+  "cobertura": {
+    "expected": "AMPLIA",
+    "actual": null,
+    "match": false
+  },
+  "formaDePago": {
+    "expected": "CONTADO",
+    "actual": null,
+    "match": false
+  },
+  "primaNeta": {
+    "expected": "9380.48",
+    "actual": null,
+    "match": false
+  },
+  "primerPago": {
+    "expected": "11403.36",
+    "actual": null,
+    "match": false
+  },
+  "pagoPosterior": {
+    "expected": "0",
+    "actual": null,
+    "match": false
+  },
+  "descuento": {
+    "expected": "0",
+    "actual": null,
+    "match": false
+  },
+  "iva": {
+    "expected": "1572.88",
+    "actual": null,
+    "match": false
+  },
+  "tasaFinanciamiento": {
+    "expected": "0",
+    "actual": null,
+    "match": false
+  },
+  "derechoPoliza": {
+    "expected": "",
+    "actual": null,
+    "match": false
+  },
+  "total": {
+    "expected": "11403.36",
+    "actual": null,
+    "match": false
+  },
+  "cargoPorFinanciamiento": {
+    "expected": "0",
+    "actual": null,
+    "match": false
+  },
+  "rfcAsegurado": {
+    "expected": "AUCZ890905H88",
+    "actual": null,
+    "match": false
+  },
+  "nombreAsegurado": {
+    "expected": "ZAIRA VANESSA AGUIRRE CASTAÑEDA",
+    "actual": null,
+    "match": false
+  },
+  "numeroSerie": {
+    "expected": "WDCTG4DBXHJ319045",
+    "actual": null,
+    "match": false
+  },
+  "modelo": {
+    "expected": "2017",
+    "actual": null,
+    "match": false
+  },
+  "numeroPlacas": {
+    "expected": "",
+    "actual": null,
+    "match": false
+  },
+  "adaptaciones": {
+    "expected": "",
+    "actual": null,
+    "match": false
+  },
+  "version": {
+    "expected": "02134",
+    "actual": null,
+    "match": false
+  },
+  "beneficiarioPreferente": {
+    "expected": "",
+    "actual": null,
+    "match": false
+  },
+  "overall_accuracy": 0.04
+}

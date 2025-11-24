@@ -1,7 +1,8 @@
 import os
 import json
 
-path_to_json_file = "D:/DOCUMENTS/self_study/Agents/langchain_learning/automatic_program_engineering/blueprints"
+# path_to_json_file = "D:/DOCUMENTS/self_study/Agents/langchain_learning/automatic_program_engineering/blueprints"
+path_to_json_file = "D:/DOCUMENTS/self_study/Agents/langchain_learning/automatic_program_engineering/assets/desired_output/output_auto_chubb_few_incomplete.json"
 
 def generate_blueprint_from_json(json_path: str, class_name: str):
 	"""

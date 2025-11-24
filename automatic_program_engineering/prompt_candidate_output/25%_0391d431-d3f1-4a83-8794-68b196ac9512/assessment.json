@@ -1,0 +1,23 @@
+{
+  "poliza": {
+    "expected": "GO42001981",
+    "actual": null,
+    "match": false
+  },
+  "inicioPeriodoVigencia": {
+    "expected": "2022-07-06T12:00:00-06:00",
+    "actual": null,
+    "match": false
+  },
+  "finalPeriodoVigencia": {
+    "expected": "2023-07-06T12:00:00-06:00",
+    "actual": null,
+    "match": false
+  },
+  "aseguradora": {
+    "expected": "CHUBB",
+    "actual": "CHUBB",
+    "match": true
+  },
+  "overall_accuracy": 0.25
+}
