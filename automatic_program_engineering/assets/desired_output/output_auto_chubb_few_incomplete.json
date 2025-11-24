@@ -2,5 +2,14 @@
   "poliza": "GO42001981",
   "inicioPeriodoVigencia": "2022-07-06T12:00:00-06:00",
   "finalPeriodoVigencia": "2023-07-06T12:00:00-06:00",
-  "aseguradora": "CHUBB"
+  "aseguradora": "CHUBB",
+  
+  "primaNeta": "9380.48",
+  "primerPago": "11403.36",
+  "pagoPosterior": "0",
+  "descuento": "0",
+  "iva": "1572.88",
+  "tasaFinanciamiento": "0",
+  "derechoPoliza": "",
+  "total": "11403.36"
 }

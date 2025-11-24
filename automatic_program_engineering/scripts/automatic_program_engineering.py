@@ -29,12 +29,17 @@ json_desired_output_path = "D:/DOCUMENTS/self_study/Agents/langchain_learning/au
 
 
 # Define prompt for automatic program engineering (APE).
+# String value prompt
 template_generator_prompt = f"""
     Eres un experto prompt engineer especializado en extraer datos estructurados de documentos no estructurados.
 
     Recibirás como entrada:
         - El archivo del cual se extraerá la información.
         - La información deseada en el esquema de salida.
+
+    # En caso de presentarse fechas, sigue la norma ISO: "yyyy-MM-DDThh:mm:ss-06:00".
+        
+    # Para el caso de un dato númerico como "1000.0", presta especial atención a los separadores de miles y decimales. Así tambien, identifica en que parte del documento se encuentra dicha información. Casí siempre siguen el formato: concepto: cantidad. ejemplo: IVA: 1,600.00 
 
     Instrucciónes:
     1. Analiza los campos de la salida estructurada.
@@ -43,9 +48,26 @@ template_generator_prompt = f"""
     4. Genera una plantilla de prompt detallada para cada campo, enfocándote en patrones y diseño del documento.
     5. Evita dar ejemplos de salidas en la descripción.
 
-    # Ten en cuenta que se te podra pasar psadas iteraciones, tomalas en consideración para mejorar el prompt.
+    # Ten en cuenta que se te podra pasar psadas iteraciones, tomalas en consideración para mejorar el prompt.    
+"""
 
-    # Respeta los formatos de fecha que se encuentran en el documento.
+template_generator_prompt = f"""
+    Eres un experto prompt engineer especializado en extraer datos estructurados de documentos no estructurados.
+
+    Recibirás como entrada:
+        - El archivo del cual se extraerá la información.
+        - La información deseada en el esquema de salida.
+
+    # Para el caso de un dato númerico como "1000.0", presta especial atención a los separadores de miles y decimales. Así tambien, identifica en que parte del documento se encuentra dicha información. Casí siempre siguen el formato: concepto: cantidad. ejemplo: IVA: 1,600.00 
+
+    Instrucciónes (para cada campo):
+    1. Analiza el "campo" y su "valor" solicitado del JSON con la información deseada.
+    2. Dado a que es un valor numerico, es muy probable que su aparición sea unica a lo largo del documento, identifica donde sale el documento. Ignora las ',' que dividen los miles y millones, respeta solo los puntos decimales.
+    3. Una vez localizado, analiza los alrededores del campo, encuentra patrones, y ubicación del documento..
+    4. Genera una plantilla de prompt detallada para cada campo, enfocándote en patrones y diseño del documento.
+    5. Evita dar ejemplos de salidas en la descripción.
+
+    # Ten en cuenta que se te podra pasar psadas iteraciones, tomalas en consideración para mejorar el prompt.    
 """
 
 # template_generator_prompt = f"""
@@ -163,6 +185,8 @@ def generate_prompt_from_blueprint(prompt_generator, source_file_path, desired_o
             # ]
         }
     )
+    print("Result model invokation*********************************")
+    print(result)
 
     prompt_template = result.get("structured_response")
     
@@ -235,6 +259,7 @@ def extract_information_from_prompt(prompt_template_dict: dict, input_file: dict
             }
         ]
     })
+
 
     model_output = result_validation.get('structured_response')
 
@@ -322,7 +347,7 @@ def main():
 
     messages:list[LangChainMessage] = []
 
-    for i in range(3):
+    for i in range(1):
         # Generate prompt from blueprint. Contains the description of how to locate each field in the file.
         print("\033[1mGenerating prompt from blueprint...\033[0m")
         json_prompt:dict = generate_prompt_from_blueprint(template_generator_prompt, input_file_path, json_desired_output_path, messages)

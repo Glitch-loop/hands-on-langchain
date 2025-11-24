@@ -84,6 +84,8 @@ template_extractor_prompt =f"""
 
     # Si no encontraste la información, expresa en el texto, que dicha información no fue encontrada.
 
+    # En caso de presentarse fechas, sigue la norma ISO 8601: "yyyy-MM-DDThh:mm:ss-06:00".
+
     # El cliente valora mas la "precisión" que la rapidez, así que tómate tu tiempo para validar cada campo.
     
     Información a encontrar:
@@ -100,6 +102,7 @@ template_validator_prompt =f"""
     Es importante que si no encuentras la información en el texto para un campo, 
     llenes dicho campo con un `None` 
       
+    # En caso de presentarse fechas, sigue la norma ISO 8601: "yyyy-MM-DDThh:mm:ss-06:00".
 
     Texto con la información: 
     """
@@ -107,6 +110,8 @@ template_validator_prompt =f"""
 
 def execute_test():
     path_to_prompt ="D:/DOCUMENTS/self_study/Agents/langchain_learning/automatic_program_engineering/testing/PromptCandidateTesting.json"
+    json_desired_output_path = "D:\\DOCUMENTS\\self_study\\Agents\\langchain_learning\\automatic_program_engineering\\assets\\desired_output\\output_auto_go38003253.json"
+
     prompt_template_dict = json.load(open(path_to_prompt, "r", encoding="utf-8"))
 
 
@@ -216,8 +221,7 @@ def execute_test():
 
     
     # Use the actual model output from result_validation
-    json_path = "D:\\DOCUMENTS\\self_study\\Agents\\langchain_learning\\automatic_program_engineering\\assets\\desired_output\\output_auto_go38003253.json"
-    with open(json_path, "r", encoding="utf-8") as f:
+    with open(json_desired_output_path, "r", encoding="utf-8") as f:
         reference_output = json.load(f)
 
 
@@ -232,11 +236,42 @@ def execute_test():
     for key in reference_output:
         ref_val = reference_output[key]
         model_val = model_output_dict.get(key, None)
-        comparison[key] = {
-            "expected": ref_val,
-            "actual": model_val,
-            "match": ref_val == model_val
-        }
+        match = False
+        if model_val is not None and ref_val is not None:
+            # If both are numbers (int or float), compare numerically
+            if (isinstance(ref_val, (int, float)) and isinstance(model_val, (int, float))):
+                match = float(ref_val) == float(model_val)
+            # If both are strings, use the original logic
+            elif isinstance(ref_val, str) and isinstance(model_val, str):
+                match = (
+                    ref_val.lower() == model_val.lower() or
+                    model_val.lower() in ref_val.lower() or
+                    ref_val.lower() in model_val.lower()
+                )
+            # If one is string and the other is number, try to compare as strings (for cases like "0" vs 0)
+            elif (isinstance(ref_val, (int, float)) and isinstance(model_val, str)):
+                try:
+                    match = str(ref_val) == model_val or str(ref_val) == model_val.strip()
+                except Exception:
+                    match = False
+            elif (isinstance(ref_val, str) and isinstance(model_val, (int, float))):
+                try:
+                    match = ref_val == str(model_val) or ref_val.strip() == str(model_val)
+                except Exception:
+                    match = False
+            else:
+                match = ref_val == model_val
+            comparison[key] = {
+                "expected": ref_val,
+                "actual": model_val,
+                "match": match
+            }
+        else:
+            comparison[key] = {
+                "expected": ref_val,
+                "actual": model_val,
+                "match": ref_val == model_val
+            }
 
     print("\nField-by-field comparison:")
     for k, v in comparison.items():

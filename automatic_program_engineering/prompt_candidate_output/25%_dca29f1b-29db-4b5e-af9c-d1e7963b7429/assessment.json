@@ -1,0 +1,63 @@
+{
+  "poliza": {
+    "expected": "GO42001981",
+    "actual": null,
+    "match": false
+  },
+  "inicioPeriodoVigencia": {
+    "expected": "2022-07-06T12:00:00-06:00",
+    "actual": null,
+    "match": false
+  },
+  "finalPeriodoVigencia": {
+    "expected": "2023-07-06T12:00:00-06:00",
+    "actual": null,
+    "match": false
+  },
+  "aseguradora": {
+    "expected": "CHUBB",
+    "actual": null,
+    "match": false
+  },
+  "primaNeta": {
+    "expected": "9380.48",
+    "actual": "4028.41",
+    "match": false
+  },
+  "primerPago": {
+    "expected": "11403.36",
+    "actual": "5110.99",
+    "match": false
+  },
+  "pagoPosterior": {
+    "expected": "0",
+    "actual": "0",
+    "match": true
+  },
+  "descuento": {
+    "expected": "0",
+    "actual": "0",
+    "match": true
+  },
+  "iva": {
+    "expected": "1572.88",
+    "actual": "706.50",
+    "match": false
+  },
+  "tasaFinanciamiento": {
+    "expected": "0",
+    "actual": "0",
+    "match": true
+  },
+  "derechoPoliza": {
+    "expected": "",
+    "actual": "375.00",
+    "match": false
+  },
+  "total": {
+    "expected": "11403.36",
+    "actual": "5110.99",
+    "match": false
+  },
+  "overall_accuracy": 0.25
+}
